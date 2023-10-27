@@ -1,0 +1,71 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from matplotlib.animation import PillowWriter
+
+# Redefining the functions and generating initial segmented Cantor matrix
+def generate_cantor_matrix_custom(iterations):
+    n_cols = 3 ** iterations
+    matrix = np.ones((iterations, n_cols))
+    for i in range(iterations):
+        step_size = 3 ** (iterations - i - 1)
+        for j in range(step_size, n_cols, step_size * 3):
+            matrix[i, j:j + step_size] = 0
+    return matrix
+
+def generate_segmented_cantor_matrix(iterations, segments):
+    original_matrix = generate_cantor_matrix_custom(iterations)
+    n_cols = original_matrix.shape[1]
+    segment_width = n_cols // segments
+    segmented_matrix = np.empty((0, segment_width))
+    for i in range(segments):
+        start_col = i * segment_width
+        end_col = (i + 1) * segment_width
+        segment = original_matrix[:, start_col:end_col]
+        segmented_matrix = np.vstack((segmented_matrix, segment))
+    return segmented_matrix
+
+def apply_bakers_dough_corrected(matrix):
+    rows, cols = matrix.shape
+    half_row = rows // 2
+    upper_third = matrix[:half_row, :]
+    lower_third = matrix[half_row:, :]
+    classical_transformed_upper = np.block([[lower_third], [upper_third]])
+    modified_transformed_upper = np.block([[lower_third], [np.fliplr(upper_third)]])
+    return classical_transformed_upper, modified_transformed_upper
+
+# Initialize segmented Cantor matrix
+segmented_cantor_matrix_large = generate_segmented_cantor_matrix(6, 6)
+
+# Initialize the figure
+fig, ax = plt.subplots()
+
+# Initial settings for the plot
+im = ax.imshow(np.zeros((segmented_cantor_matrix_large.shape[0], segmented_cantor_matrix_large.shape[1])),
+               cmap='gray_r', aspect='auto')
+ax.set_title('Difference of Baker\'s Dough', fontsize=10)
+ax.set_xlabel('Position', fontsize=8)
+ax.set_ylabel('Segmented Iteration', fontsize=8)
+
+def update(frame):
+    # Update segmented Cantor matrix with increasing segments
+    new_segmented_cantor_matrix = generate_segmented_cantor_matrix(12, frame + 1)  # frame+1 ensures at least one segment
+
+    # Apply the Baker's Dough transformation
+    new_classical_transformed, new_modified_transformed = apply_bakers_dough_corrected(new_segmented_cantor_matrix)
+
+    # Calculate the difference using XOR
+    new_diff_dough = np.logical_xor(new_classical_transformed, new_modified_transformed).astype(int)
+
+    # Update the displayed data
+    im.set_array(new_diff_dough)
+    plt.imshow(new_diff_dough, cmap='gray_r')
+
+# Create the animation
+ani = FuncAnimation(fig, update, frames=range(1, 222), interval=500)
+
+# Save the animation as a GIF
+#ani.save('Cantor Difference of Bakers Dough63frames22levels.gif', writer=PillowWriter(fps=5))
+
+# Uncomment the following line when running this code on your local machine to display the animation
+plt.show()
