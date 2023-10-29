@@ -1,0 +1,72 @@
+import numpy as np
+import os
+
+# User-configurable parameters
+cantor_initial_depth = 3
+cantor_visual_segments = 12
+cantor_animation_depth = 9
+
+# Function to generate Cantor matrix
+def generate_cantor_matrix_custom(iterations):
+    n_cols = 3 ** iterations
+    matrix = np.ones((iterations, n_cols))
+    for i in range(iterations):
+        step_size = 3 ** (iterations - i - 1)
+        for j in range(step_size, n_cols, step_size * 3):
+            matrix[i, j:j + step_size] = 0
+    return matrix
+
+# Function to segment the Cantor matrix
+def generate_segmented_cantor_matrix(iterations, segments):
+    original_matrix = generate_cantor_matrix_custom(iterations)
+    n_cols = original_matrix.shape[1]
+    segment_width = n_cols // segments
+    segmented_matrix = np.empty((0, segment_width))
+    for i in range(segments):
+        start_col = i * segment_width
+        end_col = (i + 1) * segment_width
+        segment = original_matrix[:, start_col:end_col]
+        segmented_matrix = np.vstack((segmented_matrix, segment))
+    return segmented_matrix
+
+# Function to apply Baker's transformation
+def apply_bakers_dough_corrected(matrix):
+    rows, cols = matrix.shape
+    half_row = rows // 2
+    upper_third = matrix[:half_row, :]
+    lower_third = matrix[half_row:, :]
+    classical_transformed_upper = np.block([[lower_third], [upper_third]])
+    modified_transformed_upper = np.block([[lower_third], [np.fliplr(upper_third)]])
+    return classical_transformed_upper, modified_transformed_upper
+
+# Function to save matrix as text file
+def save_matrix_to_txt(matrix, filename):
+    full_path = os.path.join(os.path.dirname(__file__), filename)
+    try:
+        with open(full_path, 'w') as f:
+            for row in matrix:
+                f.write(' '.join(map(str, row)) + '\n')
+        print(f"Saved to {full_path}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+# Main logic
+if __name__ == "__main__":
+    frame = 18  # As this is the frame you are interested in
+
+    # Generate segmented Cantor matrix for this frame
+    segmented_matrix = generate_segmented_cantor_matrix(cantor_animation_depth, frame + 1)
+
+    # Apply Baker's transformation
+    classical, modified = apply_bakers_dough_corrected(segmented_matrix)
+
+    # Calculate difference
+    difference = np.logical_xor(classical, modified).astype(int)
+
+    # Save the matrix to a text file
+    save_matrix_to_txt(difference, 'Bakers_Difference_Frame_18.txt')
+
+
+
+
+
